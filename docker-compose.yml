@@ -1,0 +1,16 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: pet-poop-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: petbot
+      POSTGRES_PASSWORD: petbot
+      POSTGRES_DB: petbot
+    ports:
+      - "5432:5432"
+    volumes:
+      - pet_poop_pgdata:/var/lib/postgresql/data
+
+volumes:
+  pet_poop_pgdata:
