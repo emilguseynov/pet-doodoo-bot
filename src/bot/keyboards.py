@@ -1,4 +1,10 @@
-from aiogram.types import KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove
+from aiogram.types import (
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    KeyboardButton,
+    ReplyKeyboardMarkup,
+    ReplyKeyboardRemove,
+)
 
 BTN_CREATE_PET = "Создать питомца"
 BTN_JOIN_PET = "Присоединиться к питомцу"
@@ -9,6 +15,17 @@ BTN_HISTORY = "📜 История"
 BTN_DELETE_LAST = "↩️ Удалить последнее событие"
 BTN_INVITE_CODE = "🔑 Показать код приглашения"
 BTN_HELP = "❓ Помощь"
+
+ACCIDENT_LOCATION_PREFIX = "acc_loc"
+HISTORY_PAGE_PREFIX = "hist"
+NOOP_CALLBACK = "noop"
+
+_ACCIDENT_LOCATIONS: list[tuple[str, str]] = [
+    ("Диван", "sofa"),
+    ("Кровать", "bed"),
+    ("Ковёр", "carpet"),
+    ("Другое", "other"),
+]
 
 
 def registration_keyboard() -> ReplyKeyboardMarkup:
@@ -34,3 +51,43 @@ def main_menu_keyboard() -> ReplyKeyboardMarkup:
 
 def remove_keyboard() -> ReplyKeyboardRemove:
     return ReplyKeyboardRemove()
+
+
+def accident_location_keyboard() -> InlineKeyboardMarkup:
+    buttons = [
+        InlineKeyboardButton(
+            text=label,
+            callback_data=f"{ACCIDENT_LOCATION_PREFIX}:{value}",
+        )
+        for label, value in _ACCIDENT_LOCATIONS
+    ]
+    rows = [buttons[i : i + 2] for i in range(0, len(buttons), 2)]
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def history_keyboard(*, page: int, total_pages: int) -> InlineKeyboardMarkup | None:
+    if total_pages <= 1:
+        return None
+
+    nav: list[InlineKeyboardButton] = []
+    if page > 1:
+        nav.append(
+            InlineKeyboardButton(
+                text="◀️",
+                callback_data=f"{HISTORY_PAGE_PREFIX}:{page - 1}",
+            )
+        )
+    nav.append(
+        InlineKeyboardButton(
+            text=f"{page}/{total_pages}",
+            callback_data=NOOP_CALLBACK,
+        )
+    )
+    if page < total_pages:
+        nav.append(
+            InlineKeyboardButton(
+                text="▶️",
+                callback_data=f"{HISTORY_PAGE_PREFIX}:{page + 1}",
+            )
+        )
+    return InlineKeyboardMarkup(inline_keyboard=[nav])
