@@ -10,9 +10,6 @@ from src.db.models import (
     Animal,
     AnimalMember,
     AuditLogType,
-    DefecationEvent,
-    DefecationLocation,
-    DefecationType,
     User,
 )
 from src.services.audit import log_audit
@@ -153,45 +150,10 @@ async def format_recent_events(
     viewer: User,
     limit: int = 5,
 ) -> str | None:
-    from zoneinfo import ZoneInfo
+    from src.services.events import format_event_list, get_recent_events
 
-    from src.utils.users import format_user_mention
-
-    location_labels = {
-        DefecationLocation.TOILET: "В туалет",
-        DefecationLocation.SOFA: "Диван",
-        DefecationLocation.BED: "Кровать",
-        DefecationLocation.CARPET: "Ковёр",
-        DefecationLocation.OTHER: "Другое",
-        DefecationLocation.UNKNOWN: "Неизвестно",
-    }
-
-    result = await session.execute(
-        select(DefecationEvent)
-        .where(DefecationEvent.animal_id == animal_id)
-        .options(selectinload(DefecationEvent.created_by))
-        .order_by(DefecationEvent.created_at.desc())
-        .limit(limit)
-    )
-    events = list(result.scalars().all())
-
+    events = await get_recent_events(session, animal_id=animal_id, limit=limit)
     if not events:
         return None
 
-    lines: list[str] = []
-    for index, event in enumerate(events, start=1):
-        if event.type == DefecationType.TOILET:
-            title = "✅ В туалет"
-        else:
-            location_label = location_labels.get(
-                DefecationLocation(event.location),
-                event.location,
-            )
-            title = f"❌ {location_label}"
-
-        local_time = event.created_at.astimezone(ZoneInfo(viewer.timezone))
-        timestamp = local_time.strftime("%d.%m.%Y %H:%M")
-        author = format_user_mention(event.created_by)
-        lines.append(f"{index}. {title}\n{timestamp}\n{author}")
-
-    return "\n\n".join(lines)
+    return format_event_list(events, viewer=viewer)
