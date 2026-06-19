@@ -1,0 +1,26 @@
+---
+description: Тексты бота и работа с aiogram (клавиатуры, parse mode)
+globs: src/bot/**/*.py
+alwaysApply: false
+---
+
+# Тексты и Telegram-слой
+
+## Тексты
+
+- Все пользовательские строки — в `src/bot/texts.py` (единый источник), на русском.
+- Формулировки зафиксированы в `TECHNICAL_REQUIREMENTS.md` — меняй только синхронно с ТЗ.
+- Статичные сообщения — константы (`WELCOME_NEW`), динамические — функции
+  (`def welcome_back(animal_name: str) -> str`).
+- `format_user_mention` даёт `@username`, а при его отсутствии — `display_name`
+  (зафиксированное отклонение от ТЗ).
+
+## aiogram
+
+- Бот работает с `ParseMode.HTML`: для разметки используй `<b>`, `<code>` и т.п.
+- Текст кнопок reply-меню сопоставляй с константами `BTN_*` из
+  `src/bot/keyboards.py` (`@router.message(F.text == BTN_HELP)`), не со строками.
+- Inline-сценарии (например, выбор location для accident) передают данные через
+  `callback_data`; для устаревших кнопок предусматривай корректный ответ.
+- Клавиатуры строятся фабриками в `keyboards.py` (`main_menu_keyboard()` и т.п.),
+  а не собираются прямо в хендлерах.

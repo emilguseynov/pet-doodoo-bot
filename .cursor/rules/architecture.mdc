@@ -1,0 +1,35 @@
+---
+description: Слоистая архитектура бота — handlers / services / db и middleware
+globs: src/**/*.py
+alwaysApply: false
+---
+
+# Архитектура
+
+Поток: `handlers → services → db`. Бизнес-логика живёт в `src/services/`,
+обработчики тонкие.
+
+## Слои
+
+- `src/bot/handlers/` — только приём апдейтов, вызов сервисов, ответ пользователю.
+  Каждый файл объявляет свой `router = Router()`; регистрация — в
+  `handlers/__init__.py::setup_routers()`.
+- `src/services/` — вся бизнес-логика и запросы к БД. Функции принимают
+  `session: AsyncSession` и keyword-only аргументы после неё.
+- `src/db/` — модели (`models.py`), сессия, миграции. `src/utils/` — чистые хелперы.
+- `src/bot/keyboards.py` — клавиатуры и константы кнопок (`BTN_*`).
+
+## Middleware и сессия
+
+- `DatabaseMiddleware` открывает одну `AsyncSession` на апдейт, кладёт её в
+  `data["session"]`, делает `commit()` при успехе и `rollback()` при исключении.
+- `UserMiddleware` делает upsert пользователя и кладёт его в `data["db_user"]`.
+- Хендлеры получают `session: AsyncSession` и `db_user: User` через DI aiogram.
+
+## Транзакции
+
+- Сервисы НЕ вызывают `commit()` — коммитит middleware в конце апдейта.
+- Для получения сгенерированных значений (id) используй `await session.flush()`
+  и при необходимости `await session.refresh(obj)`.
+- Связи `membership` / `animal` загружаются через `lazy="selectin"`; в запросах
+  с явной загрузкой используй `selectinload(...)`.
