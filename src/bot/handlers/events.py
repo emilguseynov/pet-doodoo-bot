@@ -4,6 +4,7 @@ from aiogram import Bot, F, Router
 from aiogram.types import CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.bot import texts
 from src.bot.keyboards import (
     ACCIDENT_LOCATION_PREFIX,
     BTN_ACCIDENT,
@@ -29,9 +30,6 @@ from src.utils.users import format_user_mention
 
 router = Router()
 
-RATE_LIMIT_MESSAGE = "Невозможно добавить событие.\nПопробуйте позже."
-NO_PET_MESSAGE = "Сначала создайте питомца или присоединитесь по коду."
-
 
 @router.message(F.text == BTN_TOILET)
 async def handle_toilet(
@@ -41,11 +39,11 @@ async def handle_toilet(
     bot: Bot,
 ) -> None:
     if db_user.membership is None:
-        await message.answer(NO_PET_MESSAGE, reply_markup=registration_keyboard())
+        await message.answer(texts.NEED_PET, reply_markup=registration_keyboard())
         return
 
     if await is_rate_limited(session, db_user.id):
-        await message.answer(RATE_LIMIT_MESSAGE, reply_markup=main_menu_keyboard())
+        await message.answer(texts.RATE_LIMITED, reply_markup=main_menu_keyboard())
         return
 
     animal_id = db_user.membership.animal_id
@@ -57,14 +55,14 @@ async def handle_toilet(
         location=DefecationLocation.TOILET,
     )
 
-    await message.answer("Событие создано.", reply_markup=main_menu_keyboard())
+    await message.answer(texts.EVENT_CREATED, reply_markup=main_menu_keyboard())
 
     mention = format_user_mention(db_user)
     await notify_animal_members(
         bot,
         session,
         animal_id=animal_id,
-        text=f"{mention} сообщил о дефекации питомца.",
+        text=texts.notify_event_toilet(mention),
         exclude_user_id=db_user.id,
     )
 
@@ -72,10 +70,10 @@ async def handle_toilet(
 @router.message(F.text == BTN_ACCIDENT)
 async def handle_accident(message: Message, db_user: User) -> None:
     if db_user.membership is None:
-        await message.answer(NO_PET_MESSAGE, reply_markup=registration_keyboard())
+        await message.answer(texts.NEED_PET, reply_markup=registration_keyboard())
         return
 
-    await message.answer("Где произошло?", reply_markup=accident_location_keyboard())
+    await message.answer(texts.ACCIDENT_WHERE, reply_markup=accident_location_keyboard())
 
 
 @router.callback_query(F.data.startswith(f"{ACCIDENT_LOCATION_PREFIX}:"))
@@ -88,7 +86,7 @@ async def handle_accident_location(
     if db_user.membership is None:
         await callback.answer()
         if isinstance(callback.message, Message):
-            await callback.message.edit_text(NO_PET_MESSAGE)
+            await callback.message.edit_text(texts.NEED_PET)
         return
 
     location_value = (callback.data or "").split(":", 1)[1]
@@ -101,7 +99,7 @@ async def handle_accident_location(
     if await is_rate_limited(session, db_user.id):
         await callback.answer()
         if isinstance(callback.message, Message):
-            await callback.message.edit_text(RATE_LIMIT_MESSAGE)
+            await callback.message.edit_text(texts.RATE_LIMITED)
         return
 
     animal_id = db_user.membership.animal_id
@@ -115,14 +113,14 @@ async def handle_accident_location(
 
     await callback.answer()
     if isinstance(callback.message, Message):
-        await callback.message.edit_text("Событие создано.")
+        await callback.message.edit_text(texts.EVENT_CREATED)
 
     mention = format_user_mention(db_user)
     await notify_animal_members(
         bot,
         session,
         animal_id=animal_id,
-        text=f"{mention} сообщил о дефекации питомца вне туалета.",
+        text=texts.notify_event_accident(mention),
         exclude_user_id=db_user.id,
     )
 
@@ -134,7 +132,7 @@ async def handle_history(
     db_user: User,
 ) -> None:
     if db_user.membership is None:
-        await message.answer(NO_PET_MESSAGE, reply_markup=registration_keyboard())
+        await message.answer(texts.NEED_PET, reply_markup=registration_keyboard())
         return
 
     await _render_history(message, session, db_user, page=1, edit=False)
@@ -178,7 +176,7 @@ async def _render_history(
     events, total = await get_history_page(session, animal_id=animal_id, page=page)
 
     if total == 0:
-        text = "История пуста."
+        text = texts.HISTORY_EMPTY
         if edit:
             await message.edit_text(text)
         else:

@@ -4,6 +4,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.bot import texts
 from src.bot.keyboards import (
     BTN_HELP,
     BTN_INVITE_CODE,
@@ -26,13 +27,13 @@ async def cmd_start(
     if db_user.membership is not None:
         animal_name = db_user.membership.animal.name
         await message.answer(
-            f"С возвращением! Питомец: <b>{animal_name}</b>",
+            texts.welcome_back(animal_name),
             reply_markup=main_menu_keyboard(),
         )
         return
 
     await message.answer(
-        "Привет! Чтобы начать, создайте питомца или присоединитесь по коду.",
+        texts.WELCOME_NEW,
         reply_markup=registration_keyboard(),
     )
 
@@ -41,14 +42,13 @@ async def cmd_start(
 async def show_invite_code(message: Message, db_user: User) -> None:
     if db_user.membership is None:
         await message.answer(
-            "Сначала создайте питомца или присоединитесь по коду.",
+            texts.NEED_PET,
             reply_markup=registration_keyboard(),
         )
         return
 
     await message.answer(
-        "Код приглашения:\n"
-        f"<code>{db_user.membership.animal.invite_code}</code>",
+        texts.invite_code(db_user.membership.animal.invite_code),
         reply_markup=main_menu_keyboard(),
     )
 
@@ -60,12 +60,4 @@ async def show_help(message: Message, db_user: User) -> None:
         if db_user.membership is not None
         else registration_keyboard()
     )
-    await message.answer(
-        "Этот бот помогает нескольким владельцам вести журнал "
-        "дефекации питомца и получать напоминания.\n\n"
-        "✅ В туалет — записать успешный поход в туалет.\n"
-        "❌ Не в туалет — записать промах и указать место.\n"
-        "📜 История — посмотреть журнал событий.\n"
-        "🔑 Показать код приглашения — пригласить других владельцев.",
-        reply_markup=keyboard,
-    )
+    await message.answer(texts.HELP, reply_markup=keyboard)

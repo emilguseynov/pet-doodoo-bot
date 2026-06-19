@@ -3,6 +3,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.bot import texts
 from src.bot.keyboards import (
     BTN_CREATE_PET,
     BTN_JOIN_PET,
@@ -37,7 +38,7 @@ async def _notify_left_previous_pet(
         bot,
         session,
         animal_id=animal_id,
-        text=f"{mention} больше не является владельцем питомца.",
+        text=texts.notify_user_left(mention),
     )
 
 
@@ -45,7 +46,7 @@ async def _notify_left_previous_pet(
 async def start_create_pet(message: Message, state: FSMContext) -> None:
     await state.set_state(RegistrationStates.waiting_for_pet_name)
     await message.answer(
-        "Введите имя питомца:",
+        texts.ENTER_PET_NAME,
         reply_markup=remove_keyboard(),
     )
 
@@ -61,20 +62,18 @@ async def process_pet_name(
     if message.text in {BTN_CREATE_PET, BTN_JOIN_PET}:
         if message.text == BTN_JOIN_PET:
             await state.set_state(RegistrationStates.waiting_for_invite_code)
-            await message.answer("Введите код приглашения:")
+            await message.answer(texts.ENTER_INVITE_CODE)
         else:
-            await message.answer("Введите имя питомца:")
+            await message.answer(texts.ENTER_PET_NAME)
         return
 
     pet_name = (message.text or "").strip()
     if not pet_name:
-        await message.answer("Имя не может быть пустым. Введите имя питомца:")
+        await message.answer(texts.PET_NAME_EMPTY)
         return
 
     if len(pet_name) > PET_NAME_MAX_LENGTH:
-        await message.answer(
-            f"Слишком длинное имя. Максимум {PET_NAME_MAX_LENGTH} символов."
-        )
+        await message.answer(texts.pet_name_too_long(PET_NAME_MAX_LENGTH))
         return
 
     animal, leave_result = await create_animal(session, user=db_user, name=pet_name)
@@ -89,8 +88,7 @@ async def process_pet_name(
 
     await state.clear()
     await message.answer(
-        "Питомец создан.\n\n"
-        f"Код приглашения:\n<code>{animal.invite_code}</code>",
+        texts.pet_created(animal.invite_code),
         reply_markup=main_menu_keyboard(),
     )
 
@@ -99,7 +97,7 @@ async def process_pet_name(
 async def start_join_pet(message: Message, state: FSMContext) -> None:
     await state.set_state(RegistrationStates.waiting_for_invite_code)
     await message.answer(
-        "Введите код приглашения:",
+        texts.ENTER_INVITE_CODE,
         reply_markup=remove_keyboard(),
     )
 
@@ -115,25 +113,25 @@ async def process_invite_code(
     if message.text in {BTN_CREATE_PET, BTN_JOIN_PET}:
         if message.text == BTN_CREATE_PET:
             await state.set_state(RegistrationStates.waiting_for_pet_name)
-            await message.answer("Введите имя питомца:")
+            await message.answer(texts.ENTER_PET_NAME)
         else:
-            await message.answer("Введите код приглашения:")
+            await message.answer(texts.ENTER_INVITE_CODE)
         return
 
     invite_code = (message.text or "").strip()
     if not invite_code:
-        await message.answer("Введите код приглашения:")
+        await message.answer(texts.ENTER_INVITE_CODE)
         return
 
     animal = await get_animal_by_invite_code(session, invite_code)
     if animal is None:
-        await message.answer("Код не найден.\nВведите код повторно.")
+        await message.answer(texts.INVITE_CODE_NOT_FOUND)
         return
 
     if db_user.membership is not None and db_user.membership.animal_id == animal.id:
         await state.clear()
         await message.answer(
-            f"Вы уже подключены к питомцу {animal.name}.",
+            texts.already_joined(animal.name),
             reply_markup=main_menu_keyboard(),
         )
         return
@@ -144,7 +142,7 @@ async def process_invite_code(
         if str(error) == "owner_limit_reached":
             await state.clear()
             await message.answer(
-                "Невозможно присоединиться.\nДостигнут лимит владельцев.",
+                texts.OWNER_LIMIT_REACHED,
                 reply_markup=registration_keyboard(),
             )
             return
@@ -163,13 +161,13 @@ async def process_invite_code(
         bot,
         session,
         animal_id=animal.id,
-        text=f"{mention} присоединился к питомцу.",
+        text=texts.notify_user_joined(mention),
         exclude_user_id=db_user.id,
     )
 
     await state.clear()
 
-    response_lines = [f"Вы подключены к питомцу {animal.name}."]
+    response_lines = [texts.joined_pet(animal.name)]
     recent_events = await format_recent_events(
         session,
         animal_id=animal.id,

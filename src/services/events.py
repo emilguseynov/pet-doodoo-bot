@@ -7,6 +7,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from src.bot import texts
 from src.db.models import (
     AuditLogType,
     DefecationEvent,
@@ -20,24 +21,16 @@ from src.utils.users import format_user_mention
 RATE_LIMIT_SECONDS = 60
 HISTORY_PAGE_SIZE = 20
 
-_LOCATION_LABELS = {
-    DefecationLocation.TOILET: "В туалет",
-    DefecationLocation.SOFA: "Диван",
-    DefecationLocation.BED: "Кровать",
-    DefecationLocation.CARPET: "Ковёр",
-    DefecationLocation.OTHER: "Другое",
-    DefecationLocation.UNKNOWN: "Неизвестно",
-}
-
 
 def event_title(event: DefecationEvent) -> str:
     if event.type == DefecationType.TOILET:
-        return "✅ В туалет"
+        return texts.EVENT_TITLE_TOILET
     try:
         location = DefecationLocation(event.location)
     except ValueError:
-        return f"❌ {event.location}"
-    return f"❌ {_LOCATION_LABELS.get(location, event.location)}"
+        return f"{texts.ACCIDENT_TITLE_PREFIX}{event.location}"
+    label = texts.LOCATION_LABELS.get(location, event.location)
+    return f"{texts.ACCIDENT_TITLE_PREFIX}{label}"
 
 
 def format_event_list(
