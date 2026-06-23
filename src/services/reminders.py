@@ -15,9 +15,9 @@ from src.services.notifications import notify_animal_members
 
 logger = logging.getLogger(__name__)
 
-FIRST_REMINDER_SECONDS = 10
-REPEAT_REMINDER_SECONDS = 5
-REMINDER_CHECK_INTERVAL_SECONDS = 5
+FIRST_REMINDER_SECONDS = 48 * 3600
+REPEAT_REMINDER_SECONDS = 8 * 3600
+REMINDER_CHECK_INTERVAL_SECONDS = 60
 
 
 async def get_reminder_state(

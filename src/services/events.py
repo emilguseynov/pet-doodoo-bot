@@ -17,6 +17,7 @@ from src.db.models import (
 )
 from src.services.audit import log_audit
 from src.services.reminders import reset_reminder_cycle
+from src.utils.event_format import event_title_from_values
 from src.utils.users import format_user_mention
 
 RATE_LIMIT_SECONDS = 60
@@ -24,14 +25,7 @@ HISTORY_PAGE_SIZE = 5
 
 
 def event_title(event: DefecationEvent) -> str:
-    if event.type == DefecationType.TOILET:
-        return texts.EVENT_TITLE_TOILET
-    try:
-        location = DefecationLocation(event.location)
-    except ValueError:
-        return f"{texts.ACCIDENT_TITLE_PREFIX}{event.location}"
-    label = texts.LOCATION_LABELS.get(location, event.location)
-    return f"{texts.ACCIDENT_TITLE_PREFIX}{label}"
+    return event_title_from_values(event_type=event.type, location=event.location)
 
 
 def format_event_list(

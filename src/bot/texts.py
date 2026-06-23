@@ -24,7 +24,9 @@ HELP = (
     "✅ В туалет — записать успешный поход в туалет.\n"
     "❌ Не в туалет — записать промах и указать место.\n"
     "📜 История — посмотреть журнал событий.\n"
-    "🔑 Показать код приглашения — пригласить других владельцев."
+    "↩️ Удалить последнее событие — удалить последнюю запись в журнале.\n"
+    "🔑 Показать код приглашения — пригласить других владельцев.\n\n"
+    "/eventlog — технический журнал изменений (не отображается в меню)."
 )
 
 
@@ -83,6 +85,43 @@ HISTORY_EMPTY = "История пуста."
 DELETE_CONFIRM = "Удалить последнее событие?"
 DELETE_NO_EVENTS = "Нет событий для удаления."
 SCENARIO_ALREADY_COMPLETED = "Этот сценарий уже завершен."
+
+# --- Event Log ---
+
+EVENTLOG_EMPTY = "Журнал изменений пуст."
+
+AUDIT_TYPE_EVENT_CREATED = "Событие создано"
+AUDIT_TYPE_EVENT_DELETED = "Событие удалено"
+AUDIT_TYPE_NOTIFICATION_SENT = "Уведомление отправлено"
+AUDIT_TYPE_USER_JOINED = "Владелец присоединился"
+AUDIT_TYPE_USER_LEFT = "Владелец покинул питомца"
+AUDIT_TYPE_ERROR = "Ошибка"
+
+AUDIT_TYPE_LABELS: dict[str, str] = {
+    "EVENT_CREATED": AUDIT_TYPE_EVENT_CREATED,
+    "EVENT_DELETED": AUDIT_TYPE_EVENT_DELETED,
+    "NOTIFICATION_SENT": AUDIT_TYPE_NOTIFICATION_SENT,
+    "USER_JOINED": AUDIT_TYPE_USER_JOINED,
+    "USER_LEFT": AUDIT_TYPE_USER_LEFT,
+    "ERROR": AUDIT_TYPE_ERROR,
+}
+
+
+def audit_user_joined(mention: str) -> str:
+    return f"{mention} присоединился"
+
+
+def audit_user_left(mention: str) -> str:
+    return f"{mention} покинул питомца"
+
+
+def audit_notification_sent(mention: str) -> str:
+    return f"→ {mention}"
+
+
+def audit_error(message: str) -> str:
+    return message
+
 
 EVENT_TITLE_TOILET = "✅ В туалет"
 ACCIDENT_TITLE_PREFIX = "❌ "

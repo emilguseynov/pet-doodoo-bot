@@ -18,6 +18,7 @@ BTN_HELP = "❓ Помощь"
 
 ACCIDENT_LOCATION_PREFIX = "acc_loc"
 HISTORY_PAGE_PREFIX = "hist"
+EVENTLOG_PAGE_PREFIX = "evlog"
 DELETE_CONFIRM_YES = "del_yes"
 DELETE_CONFIRM_NO = "del_no"
 NOOP_CALLBACK = "noop"
@@ -90,6 +91,34 @@ def history_keyboard(*, page: int, total_pages: int) -> InlineKeyboardMarkup | N
             InlineKeyboardButton(
                 text="▶️",
                 callback_data=f"{HISTORY_PAGE_PREFIX}:{page + 1}",
+            )
+        )
+    return InlineKeyboardMarkup(inline_keyboard=[nav])
+
+
+def eventlog_keyboard(*, page: int, total_pages: int) -> InlineKeyboardMarkup | None:
+    if total_pages <= 1:
+        return None
+
+    nav: list[InlineKeyboardButton] = []
+    if page > 1:
+        nav.append(
+            InlineKeyboardButton(
+                text="◀️",
+                callback_data=f"{EVENTLOG_PAGE_PREFIX}:{page - 1}",
+            )
+        )
+    nav.append(
+        InlineKeyboardButton(
+            text=f"{page}/{total_pages}",
+            callback_data=NOOP_CALLBACK,
+        )
+    )
+    if page < total_pages:
+        nav.append(
+            InlineKeyboardButton(
+                text="▶️",
+                callback_data=f"{EVENTLOG_PAGE_PREFIX}:{page + 1}",
             )
         )
     return InlineKeyboardMarkup(inline_keyboard=[nav])
