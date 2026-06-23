@@ -55,6 +55,10 @@ async def leave_current_animal(
     session: AsyncSession,
     user: User,
 ) -> LeaveResult | None:
+    from src.services.scenarios import cancel_user_scenario
+
+    await cancel_user_scenario(session, user_id=user.id)
+
     result = await session.execute(
         select(AnimalMember)
         .where(AnimalMember.user_id == user.id)

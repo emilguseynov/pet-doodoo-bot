@@ -26,6 +26,12 @@ from src.services.events import (
     is_rate_limited,
 )
 from src.services.notifications import notify_animal_members
+from src.services.scenarios import (
+    cancel_user_scenario,
+    complete_scenario,
+    get_user_scenario,
+    start_accident_scenario,
+)
 from src.utils.users import format_user_mention
 
 router = Router()
@@ -45,6 +51,8 @@ async def handle_toilet(
     if await is_rate_limited(session, db_user.id):
         await message.answer(texts.RATE_LIMITED, reply_markup=main_menu_keyboard())
         return
+
+    await cancel_user_scenario(session, user_id=db_user.id)
 
     animal_id = db_user.membership.animal_id
     await create_event(
@@ -68,12 +76,24 @@ async def handle_toilet(
 
 
 @router.message(F.text == BTN_ACCIDENT)
-async def handle_accident(message: Message, db_user: User) -> None:
+async def handle_accident(
+    message: Message,
+    session: AsyncSession,
+    db_user: User,
+) -> None:
     if db_user.membership is None:
         await message.answer(texts.NEED_PET, reply_markup=registration_keyboard())
         return
 
-    await message.answer(texts.ACCIDENT_WHERE, reply_markup=accident_location_keyboard())
+    scenario = await start_accident_scenario(
+        session,
+        user_id=db_user.id,
+        animal_id=db_user.membership.animal_id,
+    )
+    await message.answer(
+        texts.ACCIDENT_WHERE,
+        reply_markup=accident_location_keyboard(scenario_id=scenario.id),
+    )
 
 
 @router.callback_query(F.data.startswith(f"{ACCIDENT_LOCATION_PREFIX}:"))
@@ -89,11 +109,28 @@ async def handle_accident_location(
             await callback.message.edit_text(texts.NEED_PET)
         return
 
-    location_value = (callback.data or "").split(":", 1)[1]
+    location_parts = (callback.data or "").split(":", 2)
+    if len(location_parts) != 3:
+        await callback.answer()
+        return
+
+    _, scenario_id_str, location_value = location_parts
     try:
+        scenario_id = int(scenario_id_str)
         location = DefecationLocation(location_value)
     except ValueError:
         await callback.answer()
+        return
+
+    scenario = await get_user_scenario(
+        session,
+        user_id=db_user.id,
+        scenario_id=scenario_id,
+    )
+    if scenario is None:
+        await callback.answer()
+        if isinstance(callback.message, Message):
+            await callback.message.edit_text(texts.SCENARIO_ALREADY_COMPLETED)
         return
 
     if await is_rate_limited(session, db_user.id):
@@ -102,7 +139,7 @@ async def handle_accident_location(
             await callback.message.edit_text(texts.RATE_LIMITED)
         return
 
-    animal_id = db_user.membership.animal_id
+    animal_id = scenario.animal_id
     await create_event(
         session,
         user=db_user,
@@ -110,6 +147,7 @@ async def handle_accident_location(
         event_type=DefecationType.ACCIDENT,
         location=location,
     )
+    await complete_scenario(session, scenario)
 
     await callback.answer()
     if isinstance(callback.message, Message):

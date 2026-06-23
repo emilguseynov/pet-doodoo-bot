@@ -51,6 +51,12 @@ class User(Base):
         uselist=False,
         lazy="selectin",
     )
+    pending_scenario: Mapped[PendingScenario | None] = relationship(
+        back_populates="user",
+        uselist=False,
+        lazy="selectin",
+        cascade="all, delete-orphan",
+    )
     created_events: Mapped[list[DefecationEvent]] = relationship(
         back_populates="created_by",
     )
@@ -104,6 +110,23 @@ class AnimalMember(Base):
         lazy="selectin",
     )
     user: Mapped[User] = relationship(back_populates="membership")
+
+
+class PendingScenario(Base):
+    __tablename__ = "pending_scenarios"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        unique=True,
+    )
+    animal_id: Mapped[int] = mapped_column(ForeignKey("animals.id", ondelete="CASCADE"))
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+    )
+
+    user: Mapped[User] = relationship(back_populates="pending_scenario", lazy="selectin")
 
 
 class DefecationEvent(Base):

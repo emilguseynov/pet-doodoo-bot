@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from contextlib import suppress
 
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
@@ -10,6 +11,7 @@ from src.bot.handlers import setup_routers
 from src.bot.middlewares.db import DatabaseMiddleware, UserMiddleware
 from src.config import settings
 from src.db.migrations import run_migrations
+from src.services.scenarios import run_timeout_worker
 
 def _configure_logging() -> None:
     logging.basicConfig(
@@ -36,8 +38,14 @@ async def main() -> None:
     dispatcher.update.middleware(UserMiddleware())
     dispatcher.include_router(setup_routers())
 
+    timeout_task = asyncio.create_task(run_timeout_worker(bot))
     logger.info("Бот запущен, ждём сообщения...")
-    await dispatcher.start_polling(bot)
+    try:
+        await dispatcher.start_polling(bot)
+    finally:
+        timeout_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await timeout_task
 
 
 if __name__ == "__main__":

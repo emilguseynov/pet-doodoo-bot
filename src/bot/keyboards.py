@@ -53,11 +53,11 @@ def remove_keyboard() -> ReplyKeyboardRemove:
     return ReplyKeyboardRemove()
 
 
-def accident_location_keyboard() -> InlineKeyboardMarkup:
+def accident_location_keyboard(*, scenario_id: int) -> InlineKeyboardMarkup:
     buttons = [
         InlineKeyboardButton(
             text=label,
-            callback_data=f"{ACCIDENT_LOCATION_PREFIX}:{value}",
+            callback_data=f"{ACCIDENT_LOCATION_PREFIX}:{scenario_id}:{value}",
         )
         for label, value in _ACCIDENT_LOCATIONS
     ]
