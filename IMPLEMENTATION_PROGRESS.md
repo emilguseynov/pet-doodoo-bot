@@ -353,14 +353,22 @@ pet-poop-bot/
 
 ## Как запустить локально
 
+**Первый раз:**
+
 ```bash
 cd pet-poop-bot
 cp .env.example .env          # вставить BOT_TOKEN от @BotFather
-docker compose up -d          # PostgreSQL
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-python -m src.main
+python -m venv .venv
+.venv/bin/pip install -r requirements.txt
 ```
+
+**Каждый запуск (одна команда):**
+
+```bash
+make dev
+```
+
+Поднимает PostgreSQL в Docker и запускает бота (venv активировать не нужно).
 
 Переменные окружения:
 
