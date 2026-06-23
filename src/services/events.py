@@ -19,7 +19,7 @@ from src.services.audit import log_audit
 from src.utils.users import format_user_mention
 
 RATE_LIMIT_SECONDS = 60
-HISTORY_PAGE_SIZE = 20
+HISTORY_PAGE_SIZE = 5
 
 
 def event_title(event: DefecationEvent) -> str:
