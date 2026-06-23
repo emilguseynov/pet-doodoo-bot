@@ -18,6 +18,8 @@ BTN_HELP = "❓ Помощь"
 
 ACCIDENT_LOCATION_PREFIX = "acc_loc"
 HISTORY_PAGE_PREFIX = "hist"
+DELETE_CONFIRM_YES = "del_yes"
+DELETE_CONFIRM_NO = "del_no"
 NOOP_CALLBACK = "noop"
 
 _ACCIDENT_LOCATIONS: list[tuple[str, str]] = [
@@ -91,3 +93,14 @@ def history_keyboard(*, page: int, total_pages: int) -> InlineKeyboardMarkup | N
             )
         )
     return InlineKeyboardMarkup(inline_keyboard=[nav])
+
+
+def delete_confirm_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="Да", callback_data=DELETE_CONFIRM_YES),
+                InlineKeyboardButton(text="Нет", callback_data=DELETE_CONFIRM_NO),
+            ],
+        ]
+    )

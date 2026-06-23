@@ -76,6 +76,8 @@ EVENT_CREATED = "Событие создано."
 ACCIDENT_WHERE = "Где произошло?"
 RATE_LIMITED = "Невозможно добавить событие.\nПопробуйте позже."
 HISTORY_EMPTY = "История пуста."
+DELETE_CONFIRM = "Удалить последнее событие?"
+DELETE_NO_EVENTS = "Нет событий для удаления."
 SCENARIO_ALREADY_COMPLETED = "Этот сценарий уже завершен."
 
 EVENT_TITLE_TOILET = "✅ В туалет"

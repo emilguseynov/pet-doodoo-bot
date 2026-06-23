@@ -8,11 +8,15 @@ from src.bot import texts
 from src.bot.keyboards import (
     ACCIDENT_LOCATION_PREFIX,
     BTN_ACCIDENT,
+    BTN_DELETE_LAST,
     BTN_HISTORY,
     BTN_TOILET,
+    DELETE_CONFIRM_NO,
+    DELETE_CONFIRM_YES,
     HISTORY_PAGE_PREFIX,
     NOOP_CALLBACK,
     accident_location_keyboard,
+    delete_confirm_keyboard,
     history_keyboard,
     main_menu_keyboard,
     registration_keyboard,
@@ -21,8 +25,11 @@ from src.db.models import DefecationLocation, DefecationType, User
 from src.services.events import (
     HISTORY_PAGE_SIZE,
     create_event,
+    delete_last_event,
     format_event_list,
     get_history_page,
+    get_last_event,
+    get_recent_events,
     is_rate_limited,
 )
 from src.services.notifications import notify_animal_members
@@ -176,6 +183,56 @@ async def handle_history(
     await _render_history(message, session, db_user, page=1, edit=False)
 
 
+@router.message(F.text == BTN_DELETE_LAST)
+async def handle_delete_last(
+    message: Message,
+    session: AsyncSession,
+    db_user: User,
+) -> None:
+    if db_user.membership is None:
+        await message.answer(texts.NEED_PET, reply_markup=registration_keyboard())
+        return
+
+    animal_id = db_user.membership.animal_id
+    if await get_last_event(session, animal_id=animal_id) is None:
+        await message.answer(texts.DELETE_NO_EVENTS, reply_markup=main_menu_keyboard())
+        return
+
+    await message.answer(
+        texts.DELETE_CONFIRM,
+        reply_markup=delete_confirm_keyboard(),
+    )
+
+
+@router.callback_query(F.data == DELETE_CONFIRM_YES)
+async def handle_delete_confirm_yes(
+    callback: CallbackQuery,
+    session: AsyncSession,
+    db_user: User,
+) -> None:
+    if db_user.membership is None or not isinstance(callback.message, Message):
+        await callback.answer()
+        return
+
+    animal_id = db_user.membership.animal_id
+    deleted = await delete_last_event(session, user=db_user, animal_id=animal_id)
+
+    await callback.answer()
+    if deleted is None:
+        await callback.message.edit_text(texts.DELETE_NO_EVENTS)
+        return
+
+    await callback.message.delete()
+    await _render_remaining_events(message=callback.message, session=session, viewer=db_user)
+
+
+@router.callback_query(F.data == DELETE_CONFIRM_NO)
+async def handle_delete_confirm_no(callback: CallbackQuery) -> None:
+    await callback.answer()
+    if isinstance(callback.message, Message):
+        await callback.message.delete()
+
+
 @router.callback_query(F.data.startswith(f"{HISTORY_PAGE_PREFIX}:"))
 async def handle_history_page(
     callback: CallbackQuery,
@@ -234,3 +291,19 @@ async def _render_history(
         await message.edit_text(text, reply_markup=keyboard)
     else:
         await message.answer(text, reply_markup=keyboard)
+
+
+async def _render_remaining_events(
+    message: Message,
+    session: AsyncSession,
+    viewer: User,
+) -> None:
+    animal_id = viewer.membership.animal_id
+    events = await get_recent_events(session, animal_id=animal_id, limit=HISTORY_PAGE_SIZE)
+
+    if not events:
+        await message.answer(texts.HISTORY_EMPTY, reply_markup=main_menu_keyboard())
+        return
+
+    text = format_event_list(events, viewer=viewer, start_index=1)
+    await message.answer(text, reply_markup=main_menu_keyboard())

@@ -146,3 +146,38 @@ async def get_history_page(
     )
     events = list(result.scalars().all())
     return events, total
+
+
+async def get_last_event(
+    session: AsyncSession,
+    *,
+    animal_id: int,
+) -> DefecationEvent | None:
+    events = await get_recent_events(session, animal_id=animal_id, limit=1)
+    return events[0] if events else None
+
+
+async def delete_last_event(
+    session: AsyncSession,
+    *,
+    user: User,
+    animal_id: int,
+) -> DefecationEvent | None:
+    event = await get_last_event(session, animal_id=animal_id)
+    if event is None:
+        return None
+
+    await log_audit(
+        session,
+        animal_id=animal_id,
+        log_type=AuditLogType.EVENT_DELETED,
+        payload={
+            "event_id": event.id,
+            "user_id": user.id,
+            "type": event.type,
+            "location": event.location,
+        },
+    )
+    await session.delete(event)
+    await session.flush()
+    return event
