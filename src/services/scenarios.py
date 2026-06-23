@@ -48,6 +48,7 @@ async def cancel_user_scenario(session: AsyncSession, *, user_id: int) -> None:
     scenario = result.scalar_one_or_none()
     if scenario is not None:
         await session.delete(scenario)
+        await session.flush()
 
 
 async def get_user_scenario(
