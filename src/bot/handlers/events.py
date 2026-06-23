@@ -24,13 +24,12 @@ from src.bot.keyboards import (
 from src.db.models import DefecationLocation, DefecationType, User
 from src.services.events import (
     HISTORY_PAGE_SIZE,
-    create_event,
     delete_last_event,
     format_event_list,
     get_history_page,
     get_last_event,
     get_recent_events,
-    is_rate_limited,
+    try_create_event,
 )
 from src.services.notifications import notify_animal_members
 from src.services.scenarios import (
@@ -55,20 +54,19 @@ async def handle_toilet(
         await message.answer(texts.NEED_PET, reply_markup=registration_keyboard())
         return
 
-    if await is_rate_limited(session, db_user.id):
-        await message.answer(texts.RATE_LIMITED, reply_markup=main_menu_keyboard())
-        return
-
     await cancel_user_scenario(session, user_id=db_user.id)
 
     animal_id = db_user.membership.animal_id
-    await create_event(
+    event = await try_create_event(
         session,
         user=db_user,
         animal_id=animal_id,
         event_type=DefecationType.TOILET,
         location=DefecationLocation.TOILET,
     )
+    if event is None:
+        await message.answer(texts.RATE_LIMITED, reply_markup=main_menu_keyboard())
+        return
 
     await message.answer(texts.EVENT_CREATED, reply_markup=main_menu_keyboard())
 
@@ -140,20 +138,19 @@ async def handle_accident_location(
             await callback.message.edit_text(texts.SCENARIO_ALREADY_COMPLETED)
         return
 
-    if await is_rate_limited(session, db_user.id):
-        await callback.answer()
-        if isinstance(callback.message, Message):
-            await callback.message.edit_text(texts.RATE_LIMITED)
-        return
-
     animal_id = scenario.animal_id
-    await create_event(
+    event = await try_create_event(
         session,
         user=db_user,
         animal_id=animal_id,
         event_type=DefecationType.ACCIDENT,
         location=location,
     )
+    if event is None:
+        await callback.answer()
+        if isinstance(callback.message, Message):
+            await callback.message.edit_text(texts.RATE_LIMITED)
+        return
     await complete_scenario(session, scenario)
 
     await callback.answer()

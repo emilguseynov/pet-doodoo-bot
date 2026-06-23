@@ -183,11 +183,13 @@ pet-poop-bot/
 | «Событие создано.» автору | ✅ |
 | Уведомление `<username> сообщил о дефекации питомца.` | ✅ |
 | Уведомление `<username> сообщил о дефекации питомца вне туалета.` | ✅ |
-| Rate limit: 1 событие в минуту на пользователя | ✅ (`is_rate_limited`, проверка на сервере) |
+| Rate limit: 1 событие в минуту на пользователя | ✅ (`try_create_event` + `pg_advisory_xact_lock`, проверка на сервере) |
 | «Невозможно добавить событие. Попробуйте позже.» | ✅ |
 | Audit log: `EVENT_CREATED` | ✅ |
 
 **Файлы:** `src/services/events.py`, `src/bot/handlers/events.py`
+
+**Исправление (2026-06-23):** при параллельной обработке накопившихся апдейтов (aiogram `handle_as_tasks=True`) несколько запросов одновременно проходили `is_rate_limited` до коммита первого события. Создание события вынесено в `try_create_event` с транзакционным advisory lock PostgreSQL на пользователя.
 
 **Решение:** выбор location для accident — inline-клавиатура с `scenario_id` в `callback_data`; незавершённый сценарий хранится в `pending_scenarios` (этап 3).
 

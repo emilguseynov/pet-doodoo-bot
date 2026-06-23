@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -22,6 +22,7 @@ from src.utils.users import format_user_mention
 
 RATE_LIMIT_SECONDS = 60
 HISTORY_PAGE_SIZE = 5
+_USER_EVENT_LOCK_NAMESPACE = 0x505001
 
 
 def event_title(event: DefecationEvent) -> str:
@@ -80,6 +81,33 @@ async def is_rate_limited(session: AsyncSession, user_id: int) -> bool:
         return False
     elapsed = (datetime.now(timezone.utc) - last_created_at).total_seconds()
     return elapsed < RATE_LIMIT_SECONDS
+
+
+async def _acquire_user_event_lock(session: AsyncSession, user_id: int) -> None:
+    await session.execute(
+        text("SELECT pg_advisory_xact_lock(:namespace, :user_id)"),
+        {"namespace": _USER_EVENT_LOCK_NAMESPACE, "user_id": user_id},
+    )
+
+
+async def try_create_event(
+    session: AsyncSession,
+    *,
+    user: User,
+    animal_id: int,
+    event_type: DefecationType,
+    location: DefecationLocation,
+) -> DefecationEvent | None:
+    await _acquire_user_event_lock(session, user.id)
+    if await is_rate_limited(session, user.id):
+        return None
+    return await create_event(
+        session,
+        user=user,
+        animal_id=animal_id,
+        event_type=event_type,
+        location=location,
+    )
 
 
 async def create_event(

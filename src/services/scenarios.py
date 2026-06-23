@@ -16,7 +16,7 @@ from src.db.models import (
     PendingScenario,
 )
 from src.db.session import async_session_factory
-from src.services.events import create_event, is_rate_limited
+from src.services.events import try_create_event
 from src.services.notifications import notify_animal_members
 from src.utils.users import format_user_mention
 
@@ -82,17 +82,16 @@ async def get_expired_scenarios(session: AsyncSession) -> list[PendingScenario]:
 async def process_expired_scenarios(session: AsyncSession, *, bot: Bot) -> None:
     expired = await get_expired_scenarios(session)
     for scenario in expired:
-        if await is_rate_limited(session, scenario.user_id):
-            continue
-
         user = scenario.user
-        await create_event(
+        event = await try_create_event(
             session,
             user=user,
             animal_id=scenario.animal_id,
             event_type=DefecationType.ACCIDENT,
             location=DefecationLocation.UNKNOWN,
         )
+        if event is None:
+            continue
         await complete_scenario(session, scenario)
 
         mention = format_user_mention(user)
