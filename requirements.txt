@@ -5,3 +5,4 @@ sqlalchemy[asyncio]>=2.0,<3
 asyncpg>=0.29,<1
 psycopg2-binary>=2.9,<3
 alembic>=1.13,<2
+apscheduler>=3.10,<4

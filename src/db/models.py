@@ -86,6 +86,11 @@ class Animal(Base):
         back_populates="animal",
         cascade="all, delete-orphan",
     )
+    reminder_state: Mapped[ReminderState | None] = relationship(
+        back_populates="animal",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
 
 
 class AnimalMember(Base):
@@ -165,3 +170,23 @@ class AuditLogEntry(Base):
     )
 
     animal: Mapped[Animal] = relationship(back_populates="audit_logs")
+
+
+class ReminderState(Base):
+    __tablename__ = "reminder_state"
+
+    animal_id: Mapped[int] = mapped_column(
+        ForeignKey("animals.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    last_event_id: Mapped[int | None] = mapped_column(
+        ForeignKey("defecation_events.id", ondelete="SET NULL"),
+    )
+    first_reminder_sent_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+    )
+    last_reminder_sent_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+    )
+
+    animal: Mapped[Animal] = relationship(back_populates="reminder_state")

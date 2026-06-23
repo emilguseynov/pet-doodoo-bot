@@ -16,6 +16,7 @@ from src.db.models import (
     User,
 )
 from src.services.audit import log_audit
+from src.services.reminders import reset_reminder_cycle
 from src.utils.users import format_user_mention
 
 RATE_LIMIT_SECONDS = 60
@@ -116,6 +117,7 @@ async def create_event(
             "location": event.location,
         },
     )
+    await reset_reminder_cycle(session, animal_id=animal_id, last_event=event)
     return event
 
 
@@ -180,4 +182,7 @@ async def delete_last_event(
     )
     await session.delete(event)
     await session.flush()
+
+    remaining = await get_last_event(session, animal_id=animal_id)
+    await reset_reminder_cycle(session, animal_id=animal_id, last_event=remaining)
     return event

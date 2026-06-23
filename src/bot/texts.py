@@ -70,6 +70,10 @@ def notify_event_accident(mention: str) -> str:
     return f"{mention} сообщил о дефекации питомца вне туалета."
 
 
+def reminder(animal_name: str) -> str:
+    return f"Давно не было записей о дефекации питомца {animal_name}."
+
+
 # --- События и история ---
 
 EVENT_CREATED = "Событие создано."

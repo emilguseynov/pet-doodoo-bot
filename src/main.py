@@ -11,6 +11,7 @@ from src.bot.handlers import setup_routers
 from src.bot.middlewares.db import DatabaseMiddleware, UserMiddleware
 from src.config import settings
 from src.db.migrations import run_migrations
+from src.services.reminders import setup_reminder_scheduler
 from src.services.scenarios import run_timeout_worker
 
 def _configure_logging() -> None:
@@ -39,10 +40,13 @@ async def main() -> None:
     dispatcher.include_router(setup_routers())
 
     timeout_task = asyncio.create_task(run_timeout_worker(bot))
+    reminder_scheduler = setup_reminder_scheduler(bot)
+    reminder_scheduler.start()
     logger.info("Бот запущен, ждём сообщения...")
     try:
         await dispatcher.start_polling(bot)
     finally:
+        reminder_scheduler.shutdown(wait=False)
         timeout_task.cancel()
         with suppress(asyncio.CancelledError):
             await timeout_task
